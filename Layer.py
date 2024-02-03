@@ -1,5 +1,7 @@
 from abc import ABC , abstractmethod
 import numpy as np
+from Convolution import convolution
+from Activation import *
 
 class Layer(ABC):
     def __init__(self):
@@ -106,16 +108,16 @@ class ConvolutionLayer(Layer):
         #Setting the dimensions variables
         if(len(input_dim) != len(kernel_dim)):
             raise ValueError('The dimensions of the input and kernel must be the same')
-        if(len(kernel_dim.shape) == 3): 
-            self.k_x , self.k_y , self.k_z = kernel_dim.shape
-            self.i_x , self.i_y , self.i_z = input_dim.shape
+        if(len(kernel_dim) == 3): 
+            self.k_x , self.k_y , self.k_z = kernel_dim
+            self.i_x , self.i_y , self.i_z = input_dim
             if(self.k_z != self.i_z):
                 raise ValueError('The depth of the input and the kernel must be the same')
-        elif(len(kernel_dim.shape) == 2):
-            self.k_x , self.k_y  = kernel_dim.shape
+        elif(len(kernel_dim) == 2):
+            self.k_x , self.k_y  = kernel_dim
             self.k_z = 1
             self.i_z = 1
-            self.i_x , self.i_y  = input_dim.shape
+            self.i_x , self.i_y  = input_dim
         else:
             raise ValueError('Input must be 2d or 3d')
         
@@ -129,11 +131,12 @@ class ConvolutionLayer(Layer):
                 raise ValueError('The stride must either be an int or of length 2')
             self.s_x = stride[0]
             self.s_y = stride[1]
-            
+        
+        self.stride = (self.s_x,self.s_y)
         #Preset the output dimensions
         out_x = int((self.i_x-self.k_x)/self.s_x) + 1
         out_y = int((self.i_y-self.k_y)/self.s_y) + 1
-        self.out = np.zeros((out_x,out_y,n_filters))
+        self.out = np.zeros((n_filters,out_x,out_y))
         
         #Set the bias vectors
         self.b = np.zeros(n_filters)
@@ -142,6 +145,32 @@ class ConvolutionLayer(Layer):
         #First dim is the filter number
         self.w = np.zeros((n_filters,self.k_x,self.k_y,self.k_z))
         self.grad_w = np.zeros_like(self.w)
+        self.n_filters = n_filters
+        
+        #Set the activation object
+        if(activation=='logistic'):
+            self.activation = Logistic()
+        elif(activation=='linear'):
+            self.activation = Linear()
+        
+        
+    def forward(self,input):
+        for f in range(self.n_filters):
+            kernel = self.w[f]
+            self.out[f], _ = convolution(input,kernel,self.stride)
+            self.out[f] = self.activation.phi(self.out[f])
+
+
+if __name__ == '__main__':
+    conv_layer = ConvolutionLayer((3,3),(2,2),activation='linear')
+    A = np.arange(9).reshape((3,3,1))
+    conv_layer.w[0] = np.array([[1,1],[1,1]]).reshape((2,2,1))
+    conv_layer.forward(A)
+    conv_layer.out
+    
+            
+            
+            
         
         
         
