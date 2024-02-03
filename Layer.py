@@ -9,10 +9,12 @@ class Layer(ABC):
     def forward(self):
         pass
     
-    
-    
+    def get_weights(self):
+        if self.w is None:
+            return None
+        return self.w
 
-
+######### DENSE LAYER ##############
 
 class DenseLayer(Layer):
     def __init__(self,size,input_size,activation = 'logistic',bias = True):
