@@ -13,6 +13,13 @@ class Layer(ABC):
         if self.w is None:
             return None
         return self.w
+    
+    def reset_all(self):
+        #Reset all the output and gradients
+        self.out.fill(0)
+        self.grad_bw.fill(0)
+        self.grad_b.fill(0)
+        
 
 ######### DENSE LAYER ##############
 
@@ -88,4 +95,62 @@ class DenseLayer(Layer):
         #TODO, set learning rate
         #Finally, learn through the magic of gradient descent
         self.w = self.w - 0.001* self.gradw    
+        
+
+class ConvolutionLayer(Layer):
+    def __init__(self,input_dim,
+                 kernel_dim,
+                 stride = 1,
+                 n_filters = 1,activation='logistic',bias=True):
+        
+        #Setting the dimensions variables
+        if(len(input_dim) != len(kernel_dim)):
+            raise ValueError('The dimensions of the input and kernel must be the same')
+        if(len(kernel_dim.shape) == 3): 
+            self.k_x , self.k_y , self.k_z = kernel_dim.shape
+            self.i_x , self.i_y , self.i_z = input_dim.shape
+            if(self.k_z != self.i_z):
+                raise ValueError('The depth of the input and the kernel must be the same')
+        elif(len(kernel_dim.shape) == 2):
+            self.k_x , self.k_y  = kernel_dim.shape
+            self.k_z = 1
+            self.i_z = 1
+            self.i_x , self.i_y  = input_dim.shape
+        else:
+            raise ValueError('Input must be 2d or 3d')
+        
+        
+        #Setting the stride
+        if(isinstance(stride,int)):
+            self.s_x = stride
+            self.s_y = stride
+        elif(isinstance(stride,(tuple,list,np.ndarray))):
+            if(len(stride) != 2):
+                raise ValueError('The stride must either be an int or of length 2')
+            self.s_x = stride[0]
+            self.s_y = stride[1]
+            
+        #Preset the output dimensions
+        out_x = int((self.i_x-self.k_x)/self.s_x) + 1
+        out_y = int((self.i_y-self.k_y)/self.s_y) + 1
+        self.out = np.zeros((out_x,out_y,n_filters))
+        
+        #Set the bias vectors
+        self.b = np.zeros(n_filters)
+        self.grad_b = np.zeros_like(self.b)
+        #Kernel weights, all in one big 4d table,
+        #First dim is the filter number
+        self.w = np.zeros((n_filters,self.k_x,self.k_y,self.k_z))
+        self.grad_w = np.zeros_like(self.w)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         

@@ -27,6 +27,8 @@ def convolution(input,kernel,stride=1,zero_padding=False):
     else:
         raise ValueError('Input must be 2d or 3d')
     
+
+    
     
     if(isinstance(stride,int)):
         s_x = stride
@@ -41,16 +43,25 @@ def convolution(input,kernel,stride=1,zero_padding=False):
     out_x = int((inp_x-k_x)/s_x) + 1
     out_y = int((inp_y-k_y)/s_y) + 1
 
+    
+    #Make an array of lists
+    inp_out_tbl = np.frompyfunc(list,0,1)(np.empty((inp_x,inp_y),dtype = object))
+
+
+
     out = np.zeros((out_x,out_y))
     for i in range(out_x):
         for j in range(out_y):
             slice = input[i*s_x:i*s_x+k_x,j*s_y:j*s_y+k_y]
+            for m in range(k_x):
+                for n in range(k_y):
+                    print(f'input ({i*s_x+m},{j*s_y+n}), linked to out ({i},{j}), via weight ({m},{n})')
+                    inp_out_tbl[i*s_x+m,j*s_y+n].append((i,j,m,n))
             out[i,j] = np.sum(slice * kernel)
-    return out
+    return out , inp_out_tbl
 
 
 
-    
     
 def pooling(input,kernel_size,type='max'):
     """Make a pooling operation
@@ -63,12 +74,14 @@ def pooling(input,kernel_size,type='max'):
     return 0
 
 
+
+
 if __name__ == '__main__':
     a = np.arange(9).reshape((3,3))
     k1 = np.array([[1,1],[1,1]])
-    b = convolution(a,k1)
-    c = convolution(a,k1,stride=2)
-    k2 = np.array([[1]])
-    d = convolution(a,k2,stride = (1,2))
+    b , in_out = convolution(a,k1)
+    #c = convolution(a,k1,stride=2)
+    #k2 = np.array([[1]])
+    #d = convolution(a,k2,stride = (1,2))
     
     
