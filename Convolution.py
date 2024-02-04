@@ -61,6 +61,30 @@ def convolution(input,kernel,stride=1,zero_padding=False):
     return out , inp_out_tbl
 
 
+def make_correspondence_table(input_dim,kernel_dim,stride):
+
+    k_x , k_y , k_z = kernel_dim
+    inp_x , inp_y , inp_z = input_dim
+    s_x = stride[0]
+    s_y = stride[1]
+    
+    out_x = int((inp_x-k_x)/s_x) + 1
+    out_y = int((inp_y-k_y)/s_y) + 1
+
+    #Make an array of lists
+    inp_out_tbl = np.frompyfunc(list,0,1)(np.empty((inp_x,inp_y),dtype = object))
+    kernel_tbl = np.frompyfunc(list,0,1)(np.empty((k_x,k_y),dtype = object))
+    for i in range(out_x):
+        for j in range(out_y):
+            for m in range(k_x):
+                for n in range(k_y):
+                    print(f'input ({i*s_x+m},{j*s_y+n}), linked to out ({i},{j}), via weight ({m},{n})')
+                    inp_out_tbl[i*s_x+m,j*s_y+n].append((i,j,m,n))
+                    #Format: (output_x, output_y, kernel_x,kernel_y)
+                    kernel_tbl[m,n].append((i*s_x+m, j*s_y+n,i,j))
+                    #Format: (input_x, input_y, output_x,output_y)
+    return inp_out_tbl , kernel_tbl
+    
 
     
 def pooling(input,kernel_size,type='max'):

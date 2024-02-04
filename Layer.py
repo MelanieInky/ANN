@@ -1,6 +1,6 @@
 from abc import ABC , abstractmethod
 import numpy as np
-from Convolution import convolution
+from Convolution import convolution , make_correspondence_table
 from Activation import *
 
 class Layer(ABC):
@@ -22,23 +22,30 @@ class Layer(ABC):
         self.grad_bw.fill(0)
         self.grad_b.fill(0)
         
+    def __str__(self):
+        str = f'{self.layer_type} layer with\n'
+        str += f'Input dimensions: {self.input_dim}\n'
+        str += f'Output dimensions: {self.output_dim}'
+        return str
 
 ######### DENSE LAYER ##############
 
 class DenseLayer(Layer):
-    def __init__(self,size,input_size,activation = 'logistic',bias = True):
-        
+    def __init__(self,output_dim,input_dim,activation = 'logistic',bias = True):
+        self.layer_type = 'dense'
+        self.input_dim = input_dim
+        self.output_dim = output_dim
         self.bias = bias
-        self.h = np.zeros(size)
+        self.h = np.zeros(output_dim)
         if(bias):
             self.h[0] = 1 #Bias
-            self.w = np.zeros((size-1,input_size))
-            self.gradw = np.zeros((size-1,input_size))
+            self.w = np.zeros((output_dim-1,input_dim))
+            self.gradw = np.zeros((output_dim-1,input_dim))
         else:
-            self.w = np.zeros((size,input_size))
-            self.gradw = np.zeros((size,input_size))           
+            self.w = np.zeros((output_dim,input_dim))
+            self.gradw = np.zeros((output_dim,input_dim))           
             
-        self.delta = np.zeros(size)
+        self.delta = np.zeros(output_dim)
         if(activation == 'logistic'):
             self.phi = lambda x : 1 / (1+np.exp(-x))
             self.phi_prime_phi_x = lambda x : x*(1-x)
@@ -97,7 +104,9 @@ class DenseLayer(Layer):
         #TODO, set learning rate
         #Finally, learn through the magic of gradient descent
         self.w = self.w - 0.001* self.gradw    
-        
+     
+     
+########### Convolutional Layer #########   
 
 class ConvolutionLayer(Layer):
     def __init__(self,input_dim,
@@ -105,6 +114,7 @@ class ConvolutionLayer(Layer):
                  stride = 1,
                  n_filters = 1,activation='logistic',bias=True):
         
+        self.layer_type = 'convolutional'
         #Setting the dimensions variables
         if(len(input_dim) != len(kernel_dim)):
             raise ValueError('The dimensions of the input and kernel must be the same')
@@ -120,6 +130,11 @@ class ConvolutionLayer(Layer):
             self.i_x , self.i_y  = input_dim
         else:
             raise ValueError('Input must be 2d or 3d')
+        
+        
+        self.n_filters = n_filters
+        self.input_dim = (self.i_x,self.i_y,self.i_z)
+        self.kernel_dim = (self.k_x,self.k_y,self.k_z)
         
         
         #Setting the stride
@@ -145,8 +160,6 @@ class ConvolutionLayer(Layer):
         #First dim is the filter number
         self.w = np.zeros((n_filters,self.k_x,self.k_y,self.k_z))
         self.grad_w = np.zeros_like(self.w)
-        self.n_filters = n_filters
-        
         #Set the activation object
         if(activation=='logistic'):
             self.activation = Logistic()
@@ -159,12 +172,49 @@ class ConvolutionLayer(Layer):
             kernel = self.w[f]
             self.out[f], _ = convolution(input,kernel,self.stride)
             self.out[f] = self.activation.phi(self.out[f])
+        self.input = input
+            
+    def initialize_tables(self):
+        #Initialize the look up table with the correspondances between input,
+        # weight and outputs. Is used to get connected layers in backprop
+        self.in_out_tbl , self.kernel_tbl = make_correspondence_table(self.input_dim,self.kernel_dim,self.stride)
+        pass
+    
+    
+    def backward(self,next_layer):
+        
+        pass
+    
+    
+###### Flattening layer #########
+
+
+class FlattenLayer(Layer):
+    def __init__(self,input_layer_dim):
+        self.output_dim = (np.prod(input_layer_dim),) #in a tuple for consistency
+        self.out = np.zeros(self.output_dim[0])
+        self.input_dim = input_layer_dim
+        self.layer_type = 'Flattening'
+        
+    
+    def forward(self,input):
+        self.out = input.flatten()
+        
+    
+    def backward(self,next_layer):
+        self.delta = next_layer.delta.reshape(self.input_dim)
+    
+
+#### TODO: pooling layer
+
+        
 
 
 if __name__ == '__main__':
-    conv_layer = ConvolutionLayer((3,3),(2,2),activation='linear')
-    A = np.arange(9).reshape((3,3,1))
-    conv_layer.w[0] = np.array([[1,1],[1,1]]).reshape((2,2,1))
+    conv_layer = ConvolutionLayer((4,4),(2,2),activation='linear',stride=2)
+    conv_layer.initialize_tables()
+    A = np.arange(16).reshape((4,4,1))
+    conv_layer.w[0] = np.ones((2,2,1))
     conv_layer.forward(A)
     conv_layer.out
     

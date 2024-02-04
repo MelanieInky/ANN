@@ -1,5 +1,5 @@
 """
-Let's try and make an MLP from scratch
+Let's try and make an MLP from scratch, legacy
 """
 import numpy as np
 
