@@ -5,8 +5,13 @@ class NeuralNetwork():
         self.layer_list=[]
         self.X = X
         self.Y = Y
-        self.current_input_dim = X[0].shape
-        self.label_dim = self.Y[0].shape
+        self.input_dim = X[0].shape
+        self.output_dim = Y[0].shape
+        self.current_input_dim = self.input_dim
+        self.label_dim = self.output_dim #Alias for output_dim
+        
+
+        
         
     def add_dense_layer(self,n_nodes,activation='linear'):
         if self.layer_list:
@@ -30,6 +35,18 @@ class NeuralNetwork():
             out = layer.forward(input)
             input = out
     
+    def backward_nn(self):
+        pass
+    
+    def __str__(self) -> str:
+        str = 'Neural network with:\n'
+        str += f'Input dimensions {self.input_dim}\n'
+        str += f'Output dimensions {self.output_dim}\n'
+        str += f'----- Layers: -----\n'
+        for layer in self.layer_list:
+            str += layer.__str__()
+        return str
+        
     
             
         
@@ -39,8 +56,8 @@ class NeuralNetwork():
 if __name__ == '__main__':
     #Test the dense layer thingy
     X = np.zeros((4,3,2)) #4 images of size 3,2
-    Y = np.zeros(10)
+    Y = np.zeros((2,10))
     ann = NeuralNetwork(X,Y)
     ann.add_dense_layer(5,'logistic')
     ann.add_dense_layer(7,'softmax')
-    print(ann.layer_list[0])
+    print(ann)

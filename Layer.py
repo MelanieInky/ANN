@@ -17,6 +17,10 @@ class Layer:
             return None
         return self.w
     
+    def get_number_of_weights_and_bias(self):
+        return np.prod(self.w.shape) + np.prod(self.b.shape)
+    
+    
     def reset_all(self):
         #Reset all the output and gradients
         self.out.fill(0)
@@ -27,7 +31,6 @@ class Layer:
         #Set the activation object
         if(activation=='logistic'):
             self.activation = Logistic()
-            print('wow')
         elif(activation=='linear'):
             self.activation = Linear()
         elif(activation == 'Relu' or activation=='ReLu' or activation=='relu'):
@@ -37,15 +40,15 @@ class Layer:
         elif(activation == 'softmax' or activation == 'Softmax'):
             self.activation = SoftMax()
         else:
-            print('Unkown activation function')
+            raise NotImplementedError('Unknown activation function')
     
         
     def __str__(self):
         str = f'{self.layer_type} layer with\n'
-        str += f'Input dimensions: {self.input_dim}\n'
-        str += f'Output dimensions: {self.output_dim}\n'
+        str += f'- Input dimensions: {self.input_dim}\n'
+        str += f'- Output dimensions: {self.output_dim}\n'
         if(hasattr(self,'w')):
-            str += f'Weights dimensions: {self.w.shape}\n'
+            str += f'- Number of weights+bias: {self.get_number_of_weights_and_bias()}\n'
         return str
 
 ######### DENSE LAYER ##############
@@ -53,7 +56,7 @@ class Layer:
 class DenseLayer(Layer):
     def __init__(self,output_dim,input_dim,activation = 'logistic',bias = True):
         super().__init__()
-        self.layer_type = 'dense'
+        self.layer_type = 'Dense'
         self.input_dim = (input_dim,)
         self.output_dim = (output_dim,)
         
