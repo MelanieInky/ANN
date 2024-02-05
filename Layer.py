@@ -22,10 +22,24 @@ class Layer(ABC):
         self.grad_bw.fill(0)
         self.grad_b.fill(0)
         
+    def set_activation(self,activation):
+        #Set the activation object
+        if(activation=='logistic'):
+            self.activation = Logistic()
+        elif(activation=='linear'):
+            self.activation = Linear()
+        elif(activation == 'Relu' or activation=='ReLu' or activation=='relu'):
+            self.activation = ReLu()
+        elif(activation == 'tanh' or activation=='Tanh'):
+            self.activation = Tanh()
+    
+        
     def __str__(self):
         str = f'{self.layer_type} layer with\n'
         str += f'Input dimensions: {self.input_dim}\n'
-        str += f'Output dimensions: {self.output_dim}'
+        str += f'Output dimensions: {self.output_dim}\n'
+        if(hasattr(self,'w')):
+            str += f'Weights dimensions: {self.w.shape}\n'
         return str
 
 ######### DENSE LAYER ##############
@@ -33,26 +47,23 @@ class Layer(ABC):
 class DenseLayer(Layer):
     def __init__(self,output_dim,input_dim,activation = 'logistic',bias = True):
         self.layer_type = 'dense'
-        self.input_dim = input_dim
-        self.output_dim = output_dim
+        self.input_dim = (input_dim,)
+        self.output_dim = (output_dim,)
+        
+        self.out = np.zeros(output_dim)
         self.bias = bias
-        self.h = np.zeros(output_dim)
-        if(bias):
-            self.h[0] = 1 #Bias
-            self.w = np.zeros((output_dim-1,input_dim))
-            self.gradw = np.zeros((output_dim-1,input_dim))
-        else:
-            self.w = np.zeros((output_dim,input_dim))
-            self.gradw = np.zeros((output_dim,input_dim))           
-            
+        
+        
+
+        self.b = np.zeros(output_dim)
+        self.w = np.zeros((output_dim,input_dim))
+        self.gradw = np.zeros((output_dim,input_dim))
+        self.grad_b = np.zeros(output_dim)    
         self.delta = np.zeros(output_dim)
-        if(activation == 'logistic'):
-            self.phi = lambda x : 1 / (1+np.exp(-x))
-            self.phi_prime_phi_x = lambda x : x*(1-x)
-        elif(activation == 'linear'):
-            self.phi = lambda x : x
-            self.phi_prime_phi_x = lambda x : 1
+        
+        self.set_activation(activation)
         pass
+    
     
     def forward(self,input):
         """Forward the current layer with the input input
@@ -60,13 +71,11 @@ class DenseLayer(Layer):
         Args:
             x (_type_): _description_
         """
-        if(self.bias):
-            self.h[1:] = self.w @ input
-            self.h[1:] = self.phi(self.h[1:])
-        else:
-            self.h = self.w @ input
-            self.h = self.phi(self.h)     
-        return self.h
+        self.out= self.w @ input + self.b
+        print(self.out)
+        self.out = self.activation.phi(self.out)     
+        return self.out
+        
     
     
     
@@ -81,29 +90,22 @@ class DenseLayer(Layer):
             is the output layer sense.
             input (1d array): The input, from a further layer.
         """
-        #We need to ditch the first delta 
-        #Since its for the bias.
-        if(next_layer.bias == True):
-            delta = (next_layer.delta[1:] @ next_layer.w)
-        else:
-            delta = (next_layer.delta @ next_layer.w)  
-        #Checkout the bias
-        if(self.bias == True):          
-            delta[1:] *= self.phi_prime_phi_x(self.h[1:])
-        else:
-            delta *= self.phi_prime_phi_x(self.h)            
+        
+        #dE/dã_n = sum_m [d E/d a_m * d a_m/d out_n * d out_n / d ã_n]
+        #We get the 
+        delta = (next_layer.delta @ next_layer.w)
+        delta *= self.activation.dphi_phi(self.out)
+        
         self.delta = delta
-        gradw = np.outer(delta,input)
-        if(self.bias == True):
-            self.gradw -= gradw[1:] #Dump the first row
-        else:
-            self.gradw -= gradw
+        self.grad_w = np.outer(delta,input)
+        self.grad_b = next_layer.delta
         pass
     
     def learn(self):
         #TODO, set learning rate
         #Finally, learn through the magic of gradient descent
-        self.w = self.w - 0.001* self.gradw    
+        self.w = self.w - 0.001*self.grad_w
+        self.b = self.b - 0.001*self.grad_b    
      
      
 ########### Convolutional Layer #########   
@@ -160,11 +162,10 @@ class ConvolutionLayer(Layer):
         #First dim is the filter number
         self.w = np.zeros((n_filters,self.k_x,self.k_y,self.k_z))
         self.grad_w = np.zeros_like(self.w)
-        #Set the activation object
-        if(activation=='logistic'):
-            self.activation = Logistic()
-        elif(activation=='linear'):
-            self.activation = Linear()
+        
+        self.set_activation(activation)
+        
+
         
         
     def forward(self,input):
@@ -173,6 +174,7 @@ class ConvolutionLayer(Layer):
             self.out[f], _ = convolution(input,kernel,self.stride)
             self.out[f] = self.activation.phi(self.out[f])
         self.input = input
+        return self.out
             
     def initialize_tables(self):
         #Initialize the look up table with the correspondances between input,
@@ -199,10 +201,12 @@ class FlattenLayer(Layer):
     
     def forward(self,input):
         self.out = input.flatten()
+        return self.out
         
     
     def backward(self,next_layer):
         self.delta = next_layer.delta.reshape(self.input_dim)
+        
     
 
 #### TODO: pooling layer
