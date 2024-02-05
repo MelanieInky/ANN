@@ -52,6 +52,14 @@ class Linear(Activation):
     def dphi_phi(self,y):
         return 1
     
+class SoftMax(Activation):
+    def phi(self,x):
+        exp_x = np.exp(x)
+        return exp_x/np.sum(exp_x)
+    def dphi_phi(self,y):
+        return y*(1-y)
+    
+    
     
 
 if __name__ == '__main__':

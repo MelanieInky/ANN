@@ -3,8 +3,9 @@ import numpy as np
 from Convolution import convolution , make_correspondence_table
 from Activation import *
 
-class Layer(ABC):
+class Layer:
     def __init__(self):
+        self.is_last_layer = True
         pass
     
     @abstractmethod
@@ -26,12 +27,17 @@ class Layer(ABC):
         #Set the activation object
         if(activation=='logistic'):
             self.activation = Logistic()
+            print('wow')
         elif(activation=='linear'):
             self.activation = Linear()
         elif(activation == 'Relu' or activation=='ReLu' or activation=='relu'):
             self.activation = ReLu()
         elif(activation == 'tanh' or activation=='Tanh'):
             self.activation = Tanh()
+        elif(activation == 'softmax' or activation == 'Softmax'):
+            self.activation = SoftMax()
+        else:
+            print('Unkown activation function')
     
         
     def __str__(self):
@@ -46,6 +52,7 @@ class Layer(ABC):
 
 class DenseLayer(Layer):
     def __init__(self,output_dim,input_dim,activation = 'logistic',bias = True):
+        super().__init__()
         self.layer_type = 'dense'
         self.input_dim = (input_dim,)
         self.output_dim = (output_dim,)
@@ -53,8 +60,6 @@ class DenseLayer(Layer):
         self.out = np.zeros(output_dim)
         self.bias = bias
         
-        
-
         self.b = np.zeros(output_dim)
         self.w = np.zeros((output_dim,input_dim))
         self.gradw = np.zeros((output_dim,input_dim))
@@ -79,7 +84,7 @@ class DenseLayer(Layer):
     
     
     
-    def backward(self,next_layer,input):
+    def backward(self,next_layer,input,labels = None):
         """Use after a forward pass to update the gradients values of
         the weights leading to this layer, treating it as the hidden
         layer
@@ -93,12 +98,16 @@ class DenseLayer(Layer):
         
         #dE/dã_n = sum_m [d E/d a_m * d a_m/d out_n * d out_n / d ã_n]
         #We get the 
-        delta = (next_layer.delta @ next_layer.w)
-        delta *= self.activation.dphi_phi(self.out)
-        
+        if(self.is_last_layer):
+            #We assume loss is categorical cross entropy here
+            delta = labels / self.out * self.activation.dphi_phi(self.out)
+        else:
+            delta = (next_layer.delta @ next_layer.w)
+            delta *= self.activation.dphi_phi(self.out)
+                                              
         self.delta = delta
         self.grad_w = np.outer(delta,input)
-        self.grad_b = next_layer.delta
+        self.grad_b = self.delta
         pass
     
     def learn(self):
@@ -116,6 +125,7 @@ class ConvolutionLayer(Layer):
                  stride = 1,
                  n_filters = 1,activation='logistic',bias=True):
         
+        super().__init__()
         self.layer_type = 'convolutional'
         #Setting the dimensions variables
         if(len(input_dim) != len(kernel_dim)):
@@ -193,6 +203,7 @@ class ConvolutionLayer(Layer):
 
 class FlattenLayer(Layer):
     def __init__(self,input_layer_dim):
+        super().__init__()
         self.output_dim = (np.prod(input_layer_dim),) #in a tuple for consistency
         self.out = np.zeros(self.output_dim[0])
         self.input_dim = input_layer_dim
