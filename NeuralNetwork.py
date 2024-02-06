@@ -19,7 +19,6 @@ class NeuralNetwork():
             self.layer_list[-1].is_last_layer = False
         #Check if the input is flat
         if(len(self.current_input_dim) == 1):
-            print(activation)
             layer = DenseLayer(n_nodes,self.current_input_dim[0],activation)
             self.current_input_dim = (n_nodes,)
             self.layer_list.append(layer)
@@ -49,25 +48,36 @@ class NeuralNetwork():
             layer_input = self.layer_list[-2].out
             self.layer_list[-1].backward(None,layer_input,label)
             for i in range(self.n_layers-2,0,-1):
-                print(i)
                 layer_input = self.layer_list[i-1].out
                 self.layer_list[i].backward(self.layer_list[i+1],layer_input)
             self.layer_list[0].backward(self.layer_list[1],self.input)
     
     
-    def learn_nn(self,learning_rate = 0.01):
+    def _learn_nn(self,learning_rate = 0.01):
         for layer in self.layer_list:
             layer.learn(learning_rate)
+            
+    def _learn_batch(self,batch_size,n_epochs = 1000, learning_rate = 0.01):
+        #To be made better but it will do for now
+        
+        for epoch_nbr in range(n_epochs):
+            self.reset_gradients()
+            for i in range(batch_size):
+                self.forward_nn(self.X[i])
+                self.backward_nn(self.Y[i])
+            self._learn_nn(learning_rate/batch_size)
+                
+            
     
     def learn1(self,i):
-        for n in range(1000):
+        for n in range(100):
             self.forward_nn(self.X[i])
             self.backward_nn(self.Y[i])
-            self.learn_nn()
+            self._learn_nn()
             self.reset_gradients()
     
     def initialize_weights(self):
-        std_dev = 1
+        std_dev = 0.1
         mu = 0
         for layer in self.layer_list:
             layer.initialize_w_and_b(mu,std_dev)
@@ -85,7 +95,9 @@ class NeuralNetwork():
         for layer in self.layer_list:
             str += layer.__str__()
         return str
-        
+    
+    def get_output(self):
+        print(self.layer_list[-1].out)
     
             
         
@@ -94,16 +106,22 @@ class NeuralNetwork():
 
 if __name__ == '__main__':
     #Test the dense layer thingy
-    X = np.arange(10).reshape(2,5) #4 images of size 3,2
-    Y = np.zeros((2,10))
-    Y[0,1] = 1
-    Y[1,2] = 1
+    X = np.array([[-1,1,1],[1,-1,1],[1,1,-1]])
+    Y = np.zeros((3,3))
+    Y[0,0] = 1
+    Y[1,1] = 1
+    Y[2,2] = 1
     
     ann = NeuralNetwork(X,Y)
-    ann.add_dense_layer(5,'logistic')
-    ann.add_dense_layer(7,'logistic')
-    ann.add_dense_layer(10,'softmax')
+    #ann.add_dense_layer(3,'logistic')
+    ann.add_dense_layer(3,'softmax')
     ann.initialize_weights()
-    ann.learn1(0)
+    ann._learn_batch(3,10000,0.1)
     ann.forward_nn(X[0])
+    ann.get_output()
+    ann.forward_nn(X[1])
+    ann.get_output()
+    ann.forward_nn(X[2])
+    ann.get_output()
+    
     print(ann)

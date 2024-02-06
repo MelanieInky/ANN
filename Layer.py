@@ -78,7 +78,7 @@ class DenseLayer(Layer):
         
         self.b = np.zeros(output_dim)
         self.w = np.zeros((output_dim,input_dim))
-        self.gradw = np.zeros((output_dim,input_dim))
+        self.grad_w = np.zeros((output_dim,input_dim))
         self.grad_b = np.zeros(output_dim)    
         self.delta = np.zeros(output_dim)
         
@@ -121,9 +121,8 @@ class DenseLayer(Layer):
             delta *= self.activation.dphi_phi(self.out)
                             
         self.delta = delta
-        print(self.delta)
-        self.grad_w = np.outer(self.delta,input)
-        self.grad_b = self.delta
+        self.grad_w += np.outer(self.delta,input)
+        self.grad_b += self.delta
         pass
     
      
