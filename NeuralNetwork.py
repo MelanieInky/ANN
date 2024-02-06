@@ -9,6 +9,7 @@ class NeuralNetwork():
         self.output_dim = Y[0].shape
         self.current_input_dim = self.input_dim
         self.label_dim = self.output_dim #Alias for output_dim
+        self.n_layers = 0
         
 
         
@@ -22,21 +23,59 @@ class NeuralNetwork():
             layer = DenseLayer(n_nodes,self.current_input_dim[0],activation)
             self.current_input_dim = (n_nodes,)
             self.layer_list.append(layer)
+            self.n_layers+=1
         else:
             layer = FlattenLayer(self.current_input_dim)
             self.layer_list.append(layer)
+            self.n_layers+=1
             self.current_input_dim = layer.output_dim
             self.add_dense_layer(n_nodes,activation)
             
     
             
     def forward_nn(self,input):
+        #Do a whole forward pass with a specific input
+        self.input = input #Keep the input in memory
+        layer_input = input
         for layer in self.layer_list:
-            out = layer.forward(input)
-            input = out
+            out = layer.forward(layer_input)
+            layer_input = out
     
-    def backward_nn(self):
-        pass
+    def backward_nn(self,label):
+        if(self.n_layers==1):
+            self.layer_list[0].backward(None,self.input,label)
+        else:
+            #Setting up the last layer
+            layer_input = self.layer_list[-2].out
+            self.layer_list[-1].backward(None,layer_input,label)
+            for i in range(self.n_layers-2,0,-1):
+                print(i)
+                layer_input = self.layer_list[i-1].out
+                self.layer_list[i].backward(self.layer_list[i+1],layer_input)
+            self.layer_list[0].backward(self.layer_list[1],self.input)
+    
+    
+    def learn_nn(self,learning_rate = 0.01):
+        for layer in self.layer_list:
+            layer.learn(learning_rate)
+    
+    def learn1(self,i):
+        for n in range(1000):
+            self.forward_nn(self.X[i])
+            self.backward_nn(self.Y[i])
+            self.learn_nn()
+            self.reset_gradients()
+    
+    def initialize_weights(self):
+        std_dev = 1
+        mu = 0
+        for layer in self.layer_list:
+            layer.initialize_w_and_b(mu,std_dev)
+            
+    def reset_gradients(self):
+        for layer in self.layer_list:
+            layer.reset_all()
+            
     
     def __str__(self) -> str:
         str = 'Neural network with:\n'
@@ -55,9 +94,16 @@ class NeuralNetwork():
 
 if __name__ == '__main__':
     #Test the dense layer thingy
-    X = np.zeros((4,3,2)) #4 images of size 3,2
+    X = np.arange(10).reshape(2,5) #4 images of size 3,2
     Y = np.zeros((2,10))
+    Y[0,1] = 1
+    Y[1,2] = 1
+    
     ann = NeuralNetwork(X,Y)
     ann.add_dense_layer(5,'logistic')
-    ann.add_dense_layer(7,'softmax')
+    ann.add_dense_layer(7,'logistic')
+    ann.add_dense_layer(10,'softmax')
+    ann.initialize_weights()
+    ann.learn1(0)
+    ann.forward_nn(X[0])
     print(ann)

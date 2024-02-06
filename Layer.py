@@ -3,6 +3,7 @@ import numpy as np
 from Convolution import convolution , make_correspondence_table
 from Activation import *
 
+
 class Layer:
     def __init__(self):
         self.is_last_layer = True
@@ -17,14 +18,21 @@ class Layer:
             return None
         return self.w
     
-    def get_number_of_weights_and_bias(self):
+    def get_n_of_w_and_b(self):
         return np.prod(self.w.shape) + np.prod(self.b.shape)
     
+    def initialize_w_and_b(self,mu,std_dev):
+        rng = np.random.default_rng()
+        if(hasattr(self,'b')):
+            self.b = rng.normal(mu,std_dev,self.b.shape)
+        if(hasattr(self,'w')):
+            self.w = rng.normal(mu,std_dev,self.w.shape)
+        
     
     def reset_all(self):
         #Reset all the output and gradients
         self.out.fill(0)
-        self.grad_bw.fill(0)
+        self.grad_w.fill(0)
         self.grad_b.fill(0)
         
     def set_activation(self,activation):
@@ -42,13 +50,18 @@ class Layer:
         else:
             raise NotImplementedError('Unknown activation function')
     
+    def learn(self,learning_rate = 0.01):
+        if(hasattr(self,'w')):
+            self.w -= self.grad_w * learning_rate
+        if(hasattr(self,'b')):
+            self.b -= self.grad_b * learning_rate
         
     def __str__(self):
         str = f'{self.layer_type} layer with\n'
         str += f'- Input dimensions: {self.input_dim}\n'
         str += f'- Output dimensions: {self.output_dim}\n'
         if(hasattr(self,'w')):
-            str += f'- Number of weights+bias: {self.get_number_of_weights_and_bias()}\n'
+            str += f'- Number of weights+bias: {self.get_n_of_w_and_b()}\n'
         return str
 
 ######### DENSE LAYER ##############
@@ -80,7 +93,6 @@ class DenseLayer(Layer):
             x (_type_): _description_
         """
         self.out= self.w @ input + self.b
-        print(self.out)
         self.out = self.activation.phi(self.out)     
         return self.out
         
@@ -103,21 +115,17 @@ class DenseLayer(Layer):
         #We get the 
         if(self.is_last_layer):
             #We assume loss is categorical cross entropy here
-            delta = labels / self.out * self.activation.dphi_phi(self.out)
+            delta = - labels / self.out * self.activation.dphi_phi(self.out)
         else:
             delta = (next_layer.delta @ next_layer.w)
             delta *= self.activation.dphi_phi(self.out)
-                                              
+                            
         self.delta = delta
-        self.grad_w = np.outer(delta,input)
+        print(self.delta)
+        self.grad_w = np.outer(self.delta,input)
         self.grad_b = self.delta
         pass
     
-    def learn(self):
-        #TODO, set learning rate
-        #Finally, learn through the magic of gradient descent
-        self.w = self.w - 0.001*self.grad_w
-        self.b = self.b - 0.001*self.grad_b    
      
      
 ########### Convolutional Layer #########   
