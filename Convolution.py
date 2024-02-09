@@ -2,30 +2,31 @@
 
 import numpy as np
 
+DEBUG = False
 
-def convolution(input, kernel, stride=1, zero_padding=False):
+
+def convolution(inp: np.ndarray, kernel: np.ndarray, stride=1):
     """Make a convolution according to the kernel
 
     Args:
-        inp (_type_): _description_
-        kernel (_type_): _description_
+        inp (np.ndarray): The inp image, single or multiple channel
+        kernel (np.ndarray): _description_
         stride (int, optional): _description_. Defaults to 1.
-        zero_padding (bool, optional): Whether to zero pad or not. Returns the same dimensions if we have zp
     """
     # For now we forget about zero padding
 
     shape_k = kernel.shape
-    shape_inp = input.shape
+    shape_inp = inp.shape
     if len(shape_k) != len(shape_inp):
-        raise ValueError("The dimensions of the input and kernel must be the same")
+        raise ValueError("The dimensions of the inp and kernel must be the same")
     if len(kernel.shape) == 3:
         k_x, k_y, k_z = kernel.shape
-        inp_x, inp_y, inp_z = input.shape
+        inp_x, inp_y, inp_z = inp.shape
         if k_z != inp_z:
-            raise ValueError("The depth of the input and the kernel must be the same")
+            raise ValueError("The depth of the inp and the kernel must be the same")
     elif len(kernel.shape) == 2:
         k_x, k_y = kernel.shape
-        inp_x, inp_y = input.shape
+        inp_x, inp_y = inp.shape
     else:
         raise ValueError("Input must be 2d or 3d")
 
@@ -37,8 +38,6 @@ def convolution(input, kernel, stride=1, zero_padding=False):
             raise ValueError("The stride must either be an int or of length 2")
         s_x = stride[0]
         s_y = stride[1]
-        print(s_x)
-        print(s_y)
     out_x = int((inp_x - k_x) / s_x) + 1
     out_y = int((inp_y - k_y) / s_y) + 1
 
@@ -48,14 +47,15 @@ def convolution(input, kernel, stride=1, zero_padding=False):
     out = np.zeros((out_x, out_y))
     for i in range(out_x):
         for j in range(out_y):
-            slice = input[i * s_x : i * s_x + k_x, j * s_y : j * s_y + k_y]
+            sliced = inp[i * s_x: i * s_x + k_x, j * s_y: j * s_y + k_y]
             for m in range(k_x):
                 for n in range(k_y):
-                    print(
-                        f"input ({i*s_x+m},{j*s_y+n}), linked to out ({i},{j}), via weight ({m},{n})"
-                    )
+                    if DEBUG:
+                        print(
+                            f"inp ({i*s_x+m},{j*s_y+n}), linked to out ({i},{j}), via weight ({m},{n})"
+                        )
                     inp_out_tbl[i * s_x + m, j * s_y + n].append((i, j, m, n))
-            out[i, j] = np.sum(slice * kernel)
+            out[i, j] = np.sum(sliced * kernel)
     return out, inp_out_tbl
 
 
@@ -76,9 +76,10 @@ def make_correspondence_table(input_dim, kernel_dim, stride):
         for j in range(out_y):
             for m in range(k_x):
                 for n in range(k_y):
-                    print(
-                        f"input ({i*s_x+m},{j*s_y+n}), linked to out ({i},{j}), via weight ({m},{n})"
-                    )
+                    if DEBUG:
+                        print(
+                            f"inp ({i*s_x+m},{j*s_y+n}), linked to out ({i},{j}), via weight ({m},{n})"
+                        )
                     inp_out_tbl[i * s_x + m, j * s_y + n].append((i, j, m, n))
                     # Format: (output_x, output_y, kernel_x,kernel_y)
                     kernel_tbl[m, n].append((i * s_x + m, j * s_y + n, i, j))
@@ -86,11 +87,11 @@ def make_correspondence_table(input_dim, kernel_dim, stride):
     return inp_out_tbl, kernel_tbl
 
 
-def pooling(input, kernel_size, type="max"):
+def pooling(inp, kernel_size, type="max"):
     """Make a pooling operation
 
     Args:
-        input (_type_): _description_
+        inp (_type_): _description_
         kernel_size (_type_): _description_
         type (str, optional): _description_. Defaults to 'max'.
     """

@@ -1,16 +1,22 @@
-from abc import ABC, abstractmethod
-import numpy as np
-from Convolution import convolution, make_correspondence_table
 from Activation import *
+from Convolution import convolution, make_correspondence_table
 
 
 class Layer:
     def __init__(self):
+        self.output_dim = None
+        self.input_dim = None
+        self.grad_w = None
+        self.out = None
+        self.w = None
+        self.b = None
+        self.grad_b = None
+        self.activation = None
+        self.layer_type = None
         self.is_last_layer = True
-        pass
 
     @abstractmethod
-    def forward(self):
+    def forward(self, inp):
         pass
 
     def get_weights(self):
@@ -56,15 +62,15 @@ class Layer:
             self.b -= self.grad_b * learning_rate
 
     def __str__(self):
-        str = f"{self.layer_type} layer with\n"
-        str += f"- Input dimensions: {self.input_dim}\n"
-        str += f"- Output dimensions: {self.output_dim}\n"
+        str_out = f"{self.layer_type} layer with\n"
+        str_out += f"- Input dimensions: {self.input_dim}\n"
+        str_out += f"- Output dimensions: {self.output_dim}\n"
         if hasattr(self, "w"):
-            str += f"- Number of weights+bias: {self.get_n_of_w_and_b()}\n"
-        return str
+            str_out += f"- Number of weights+bias: {self.get_n_of_w_and_b()}\n"
+        return str_out
 
 
-######### DENSE LAYER ##############
+# DENSE LAYER ##############
 
 
 class DenseLayer(Layer):
@@ -86,26 +92,26 @@ class DenseLayer(Layer):
         self.set_activation(activation)
         pass
 
-    def forward(self, input):
-        """Forward the current layer with the input input
+    def forward(self, inp):
+        """Forward the current layer with the input inp
         Returns self.h for the next layer
         Args:
-            x (_type_): _description_
+            inp (np.ndarray): The 1d input from the last layer.
         """
-        self.out = self.w @ input + self.b
+        self.out = self.w @ inp + self.b
         self.out = self.activation.phi(self.out)
         return self.out
 
-    def backward(self, next_layer, input, labels=None):
+    def backward(self, next_layer, inp, labels=None):
         """Use after a forward pass to update the gradients values of
         the weights leading to this layer, treating it as the hidden
         layer
 
 
         # Args:
-            next_layer (Layer): The next layer (in the 'next_layer'
+            next_layer (Layer): The next layer (in the 'next_layer')
             is the output layer sense.
-            input (1d array): The input, from a further layer.
+            inp (1d array): The inp, from a further layer.
         """
 
         # dE/dã_n = sum_m [d E/d a_m * d a_m/d out_n * d out_n / d ã_n]
@@ -118,36 +124,38 @@ class DenseLayer(Layer):
             delta *= self.activation.dphi_phi(self.out)
 
         self.delta = delta
-        self.grad_w += np.outer(self.delta, input)
+        self.grad_w += np.outer(self.delta, inp)
         self.grad_b += self.delta
         pass
 
 
-########### Convolutional Layer #########
+# Convolutional Layer #########################
 
 
 class ConvolutionLayer(Layer):
     def __init__(
-        self,
-        input_dim,
-        kernel_dim,
-        stride=1,
-        n_filters=1,
-        activation="logistic",
-        bias=True,
+            self,
+            input_dim,
+            kernel_dim,
+            stride=1,
+            n_filters=1,
+            activation="logistic",
     ):
 
         super().__init__()
+        self.kernel_tbl = None
+        self.input = None
+        self.in_out_tbl = None
         self.layer_type = "convolutional"
         # Setting the dimensions variables
         if len(input_dim) != len(kernel_dim):
-            raise ValueError("The dimensions of the input and kernel must be the same")
+            raise ValueError("The dimensions of the inp and kernel must be the same")
         if len(kernel_dim) == 3:
             self.k_x, self.k_y, self.k_z = kernel_dim
             self.i_x, self.i_y, self.i_z = input_dim
             if self.k_z != self.i_z:
                 raise ValueError(
-                    "The depth of the input and the kernel must be the same"
+                    "The depth of the inp and the kernel must be the same"
                 )
         elif len(kernel_dim) == 2:
             self.k_x, self.k_y = kernel_dim
@@ -187,16 +195,16 @@ class ConvolutionLayer(Layer):
 
         self.set_activation(activation)
 
-    def forward(self, input):
+    def forward(self, inp):
         for f in range(self.n_filters):
             kernel = self.w[f]
-            self.out[f], _ = convolution(input, kernel, self.stride)
+            self.out[f], _ = convolution(inp, kernel, self.stride)
             self.out[f] = self.activation.phi(self.out[f])
-        self.input = input
+        self.input = inp
         return self.out
 
     def initialize_tables(self):
-        # Initialize the look up table with the correspondances between input,
+        # Initialize the look-up table with the correspondences between inp,
         # weight and outputs. Is used to get connected layers in backprop
         self.in_out_tbl, self.kernel_tbl = make_correspondence_table(
             self.input_dim, self.kernel_dim, self.stride
@@ -208,26 +216,27 @@ class ConvolutionLayer(Layer):
         pass
 
 
-###### Flattening layer #########
+# Flattening layer #######################
 
 
 class FlattenLayer(Layer):
     def __init__(self, input_layer_dim):
         super().__init__()
+        self.delta = None
         self.output_dim = (np.prod(input_layer_dim),)  # in a tuple for consistency
         self.out = np.zeros(self.output_dim[0])
         self.input_dim = input_layer_dim
         self.layer_type = "Flattening"
 
-    def forward(self, input):
-        self.out = input.flatten()
+    def forward(self, inp):
+        self.out = inp.flatten()
         return self.out
 
     def backward(self, next_layer):
         self.delta = next_layer.delta.reshape(self.input_dim)
 
 
-#### TODO: pooling layer
+# TODO: pooling layer
 
 
 if __name__ == "__main__":
