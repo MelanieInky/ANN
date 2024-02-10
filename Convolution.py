@@ -5,31 +5,34 @@ import numpy as np
 DEBUG = False
 
 
-def convolution(inp: np.ndarray, kernel: np.ndarray, stride=1):
+def convolution(inp: np.ndarray, kernel: np.ndarray, stride=1,zp = False):
     """Make a convolution according to the kernel
 
     Args:
+        zp: bool: whether to use zero padding or not, not implemented yet
         inp (np.ndarray): The inp image, single or multiple channel
         kernel (np.ndarray): _description_
         stride (int, optional): _description_. Defaults to 1.
     """
-    # For now we forget about zero padding
-
+    # For now, we forget about zero padding
+    if zp:
+        raise NotImplementedError("Zero padding is not implemented")
     shape_k = kernel.shape
     shape_inp = inp.shape
     if len(shape_k) != len(shape_inp):
         raise ValueError("The dimensions of the inp and kernel must be the same")
-    if len(kernel.shape) == 3:
-        k_x, k_y, k_z = kernel.shape
-        inp_x, inp_y, inp_z = inp.shape
+    if len(shape_k) == 3:
+        k_x, k_y, k_z = shape_k
+        inp_x, inp_y, inp_z = shape_inp
         if k_z != inp_z:
             raise ValueError("The depth of the inp and the kernel must be the same")
-    elif len(kernel.shape) == 2:
-        k_x, k_y = kernel.shape
-        inp_x, inp_y = inp.shape
+    elif len(shape_k) == 2:
+        k_x, k_y = shape_k
+        inp_x, inp_y = shape_inp
     else:
         raise ValueError("Input must be 2d or 3d")
-
+    if k_x > inp_x or k_y > inp_y:
+        raise ValueError("Kernel size must be less or equal to the input size")
     if isinstance(stride, int):
         s_x = stride
         s_y = stride
@@ -48,15 +51,8 @@ def convolution(inp: np.ndarray, kernel: np.ndarray, stride=1):
     for i in range(out_x):
         for j in range(out_y):
             sliced = inp[i * s_x: i * s_x + k_x, j * s_y: j * s_y + k_y]
-            for m in range(k_x):
-                for n in range(k_y):
-                    if DEBUG:
-                        print(
-                            f"inp ({i*s_x+m},{j*s_y+n}), linked to out ({i},{j}), via weight ({m},{n})"
-                        )
-                    inp_out_tbl[i * s_x + m, j * s_y + n].append((i, j, m, n))
             out[i, j] = np.sum(sliced * kernel)
-    return out, inp_out_tbl
+    return out
 
 
 def make_correspondence_table(input_dim, kernel_dim, stride):
