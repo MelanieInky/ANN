@@ -24,6 +24,9 @@ class Layer:
             return None
         return self.w
 
+    def get_output_dim(self):
+        return self.output_dim
+
     def get_n_of_w_and_b(self):
         return np.prod(self.w.shape) + np.prod(self.b.shape)
 
@@ -102,7 +105,7 @@ class DenseLayer(Layer):
         self.out = self.activation.phi(self.out)
         return self.out
 
-    def backward(self, next_layer, inp, labels=None):
+    def backward(self, next_layer, inp, dloss=None):
         """Use after a forward pass to update the gradients values of
         the weights leading to this layer, treating it as the hidden
         layer
@@ -118,7 +121,7 @@ class DenseLayer(Layer):
         # We get the
         if self.is_last_layer:
             # We assume loss is categorical cross entropy here
-            delta = -labels / self.out * self.activation.dphi_phi(self.out)
+            delta = dloss * self.activation.dphi_phi(self.out)
         else:
             delta = next_layer.delta @ next_layer.w
             delta *= self.activation.dphi_phi(self.out)
