@@ -5,7 +5,7 @@ import numpy as np
 DEBUG = False
 
 
-def convolution(inp: np.ndarray, kernel: np.ndarray, stride=1,zp = False):
+def convolution(inp: np.ndarray, kernel: np.ndarray, stride=1, zp=False):
     """Make a convolution(in the ANN sense) according to the kernel
     With stride 1 and 2d input, this is equivalent to
     sc.signal.correlate2d(inp, kernel, mode='valid')
@@ -37,14 +37,7 @@ def convolution(inp: np.ndarray, kernel: np.ndarray, stride=1,zp = False):
         raise ValueError("Input must be 2d or 3d")
     if k_x > inp_x or k_y > inp_y:
         raise ValueError("Kernel size must be less or equal to the input size")
-    if isinstance(stride, int):
-        s_x = stride
-        s_y = stride
-    elif isinstance(stride, (tuple, list, np.ndarray)):
-        if len(stride) != 2:
-            raise ValueError("The stride must either be an int or of length 2")
-        s_x = stride[0]
-        s_y = stride[1]
+    s_x, s_y = get_stride_xy(stride)
     out_x = int((inp_x - k_x) / s_x) + 1
     out_y = int((inp_y - k_y) / s_y) + 1
 
@@ -60,31 +53,45 @@ def convolution(inp: np.ndarray, kernel: np.ndarray, stride=1,zp = False):
 
 
 def make_correspondence_table(input_dim, kernel_dim, stride):
-
-    k_x, k_y, k_z = kernel_dim
-    inp_x, inp_y, inp_z = input_dim
-    s_x = stride[0]
-    s_y = stride[1]
+    k_x, k_y = kernel_dim[:2]
+    inp_x, inp_y = input_dim[:2]
+    s_x, s_y = get_stride_xy(stride)
 
     out_x = int((inp_x - k_x) / s_x) + 1
     out_y = int((inp_y - k_y) / s_y) + 1
 
     # Make an array of lists
-    inp_out_tbl = np.frompyfunc(list, 0, 1)(np.empty((inp_x, inp_y), dtype=object))
-    kernel_tbl = np.frompyfunc(list, 0, 1)(np.empty((k_x, k_y), dtype=object))
+    inp_out_tbl = [[ [] for _ in range(inp_y)] for _ in range(inp_x)]
+    kernel_tbl = [[ [] for _ in range(k_y)] for _ in range(k_x)]
+    # inp_out_tbl = np.frompyfunc(list, 0, 1)(np.empty((inp_x, inp_y), dtype=object))
+    # kernel_tbl = np.frompyfunc(list, 0, 1)(np.empty((k_x, k_y), dtype=object))
     for i in range(out_x):
         for j in range(out_y):
             for m in range(k_x):
                 for n in range(k_y):
                     if DEBUG:
                         print(
-                            f"inp ({i*s_x+m},{j*s_y+n}), linked to out ({i},{j}), via weight ({m},{n})"
+                            f"inp ({i * s_x + m},{j * s_y + n}), linked to out ({i},{j}), via weight ({m},{n})"
                         )
-                    inp_out_tbl[i * s_x + m, j * s_y + n].append((i, j, m, n))
+                    inp_out_tbl[i * s_x + m][j * s_y + n].append((i, j, m, n))
                     # Format: (output_x, output_y, kernel_x,kernel_y)
-                    kernel_tbl[m, n].append((i * s_x + m, j * s_y + n, i, j))
+                    kernel_tbl[m][n].append((i * s_x + m, j * s_y + n, i, j))
                     # Format: (input_x, input_y, output_x,output_y)
     return inp_out_tbl, kernel_tbl
+
+
+def get_stride_xy(stride):
+    if isinstance(stride, int):
+        s_x = stride
+        s_y = stride
+    elif isinstance(stride, (tuple, list, np.ndarray)):
+        if len(stride) != 2:
+            raise ValueError("The stride must either be an int or of length 2")
+        s_x = stride[0]
+        s_y = stride[1]
+    else:
+        raise ValueError("Unknown stride type, accepted format is either int or tuple,list,nd.array")
+    return s_x, s_y
 
 
 def pooling(inp, kernel_size, type="max"):
@@ -99,9 +106,10 @@ def pooling(inp, kernel_size, type="max"):
 
 
 if __name__ == "__main__":
+    DEBUG = True
     a = np.arange(9).reshape((3, 3))
     k1 = np.array([[1, 1], [1, 1]])
-    b, in_out = convolution(a, k1)
-    # c = convolution(a,k1,stride=2)
-    # k2 = np.array([[1]])
-    # d = convolution(a,k2,stride = (1,2))
+    b = convolution(a, k1)
+
+    inp_out_tbl , kernel_tbl = make_correspondence_table((2,2), (2,1), 1)
+    print(inp_out_tbl)

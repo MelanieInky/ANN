@@ -1,5 +1,5 @@
 import unittest
-from Convolution import convolution
+from Convolution import convolution , make_correspondence_table
 import numpy as np
 import scipy as sc
 
@@ -43,3 +43,9 @@ class TestConvolutionMethods(unittest.TestCase):
         conv = convolution(self.test_inp3d, self.test_ker3d, (2, 1))
         expected_out = np.array([[176, 160]])
         np.testing.assert_array_equal(conv, expected_out)
+
+    def test_make_correspondence_table(self):
+        inp_out_tbl , kernel_tbl = make_correspondence_table((2,2),(2,1),1)
+        exp_inp_out_tbl = [[[(0,0,0,0)],[(0,1,0,0)]],
+                            [[(0,0,1,0)],[(0,1,1,0)]]]
+        self.assertCountEqual(inp_out_tbl, exp_inp_out_tbl)
