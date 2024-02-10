@@ -41,9 +41,6 @@ def convolution(inp: np.ndarray, kernel: np.ndarray, stride=1, zp=False):
     out_x = int((inp_x - k_x) / s_x) + 1
     out_y = int((inp_y - k_y) / s_y) + 1
 
-    # Make an array of lists
-    inp_out_tbl = np.frompyfunc(list, 0, 1)(np.empty((inp_x, inp_y), dtype=object))
-
     out = np.zeros((out_x, out_y))
     for i in range(out_x):
         for j in range(out_y):
@@ -61,10 +58,9 @@ def make_correspondence_table(input_dim, kernel_dim, stride):
     out_y = int((inp_y - k_y) / s_y) + 1
 
     # Make an array of lists
-    inp_out_tbl = [[ [] for _ in range(inp_y)] for _ in range(inp_x)]
-    kernel_tbl = [[ [] for _ in range(k_y)] for _ in range(k_x)]
-    # inp_out_tbl = np.frompyfunc(list, 0, 1)(np.empty((inp_x, inp_y), dtype=object))
-    # kernel_tbl = np.frompyfunc(list, 0, 1)(np.empty((k_x, k_y), dtype=object))
+    inp_out_tbl = [[[] for _ in range(inp_y)] for _ in range(inp_x)]
+    kernel_tbl = [[[] for _ in range(k_y)] for _ in range(k_x)]
+
     for i in range(out_x):
         for j in range(out_y):
             for m in range(k_x):
@@ -111,5 +107,5 @@ if __name__ == "__main__":
     k1 = np.array([[1, 1], [1, 1]])
     b = convolution(a, k1)
 
-    inp_out_tbl , kernel_tbl = make_correspondence_table((2,2), (2,1), 1)
+    inp_out_tbl, kernel_tbl = make_correspondence_table((2, 2), (2, 1), 1)
     print(inp_out_tbl)
