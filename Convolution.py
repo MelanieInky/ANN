@@ -6,13 +6,17 @@ DEBUG = False
 
 
 def convolution(inp: np.ndarray, kernel: np.ndarray, stride=1,zp = False):
-    """Make a convolution according to the kernel
+    """Make a convolution(in the ANN sense) according to the kernel
+    With stride 1 and 2d input, this is equivalent to
+    sc.signal.correlate2d(inp, kernel, mode='valid')
 
     Args:
         zp: bool: whether to use zero padding or not, not implemented yet
         inp (np.ndarray): The inp image, single or multiple channel
         kernel (np.ndarray): _description_
         stride (int, optional): _description_. Defaults to 1.
+    Returns:
+        out: np.ndarray: The output of the convolution.
     """
     # For now, we forget about zero padding
     if zp:
