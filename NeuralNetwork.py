@@ -34,7 +34,6 @@ class NeuralNetwork:
         Compute the loss for the current label and output
         """
         self.loss += self.loss_func.loss(self.output, label)
-        print(f'partial loss: {self.loss}')
 
     def add_dense_layer(self, n_nodes, activation="linear"):
         if self.layer_list:
@@ -112,36 +111,49 @@ class NeuralNetwork:
     def reset_loss(self):
         self.loss = 0
 
-    def compare_loss_derivative_finite_diff(self, layer_number, w_coordinate):
+    def compare_loss_derivative_finite_diff(self,layer_number:int, coordinate:tuple, mode='w', sample_number=0):
         """
         Compare the derivative of the loss wrt to a specific weight using backprop  and finite difference.
         Useful for double-checking if everything works correctly
         Args:
+            sample_number: which training sample to use
+            mode:str. Default to 'w'. 'w' for weight coordinate, 'b' for bias coordinate.
             layer_number:
-            w_coordinate:
+            coordinate:
 
         Returns:
 
         """
         eps = 1e-6
         weights = self.layer_list[layer_number].get_weights()
-        weight_copy = np.copy(weights)
-        if len(w_coordinate) != weights.ndim:
+        biases = self.layer_list[layer_number].get_biases()
+        if mode == 'w' and len(coordinate) != weights.ndim:
             raise Exception("The dimension of the weight tensor and the coordinate do not match")
-        w = weights[w_coordinate]  # The specific weight to change
+        elif mode == 'b' and len(coordinate) != biases.ndim:
+            raise Exception("The dimension of the bias tensor and the coordinate do not match")
+
+        if mode == 'w':
+            w_or_b = weights[coordinate]  # The specific weight to change
+        elif mode == 'b':
+            w_or_b = biases[coordinate]
+        else:
+            raise Exception("Mode should either be 'w' or 'b' ")
         # First get the gradients with
         self.reset_gradients()
         self.reset_loss()
-        self.forward_nn(self.X[0])
-        self.add_partial_loss(Y[0])
+        self.forward_nn(self.X[sample_number])
+        self.add_partial_loss(Y[sample_number])
         loss1 = self.loss
-        self.backward_nn(self.Y[0])
-        derivative_bp = self.layer_list[layer_number].grad_w[w_coordinate]
-
-        self.layer_list[layer_number].set_weight(w_coordinate, w + eps)
+        self.backward_nn(self.Y[sample_number])
+        if mode == 'w':
+            derivative_bp = self.layer_list[layer_number].grad_w[coordinate]
+            self.layer_list[layer_number].set_weight(coordinate, w_or_b + eps)
+        else:
+            derivative_bp = self.layer_list[layer_number].grad_b[coordinate]
+            self.layer_list[layer_number].set_bias(coordinate, w_or_b + eps)
         self.reset_loss()
-        self.forward_nn(self.X[0])
-        self.add_partial_loss(Y[0])
+        self.forward_nn(self.X[sample_number])
+        self.add_partial_loss(Y[sample_number])
         loss2 = self.loss
         derivative_fd = (loss2 - loss1) / eps
         print(f'Derivative with the finite difference: {derivative_fd}')
@@ -170,11 +182,12 @@ if __name__ == "__main__":
     Y[2, 2] = 1
 
     ann = NeuralNetwork(X, Y)
-    # ann.add_dense_layer(3,'logistic')
+    ann.add_dense_layer(3,'logistic')
+    ann.add_dense_layer(5,activation='tanh')
     ann.add_dense_layer(3, "softmax")
     ann.initialize_weights()
     ann._learn_batch(1, 1, 0.1)
 
     print(ann)
 
-    ann.compare_loss_derivative_finite_diff(0, (2,1))
+    ann.compare_loss_derivative_finite_diff(1, (2,),'b',sample_number=1)

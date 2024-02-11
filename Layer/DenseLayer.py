@@ -48,19 +48,7 @@ class DenseLayer(Layer):
         # We get the
         delta = np.zeros_like(dloss)
         if self.is_last_layer:
-            # delta = dloss * self.activation.dphi_phi(self.out)
-            if not self.activation.is_special:
-                delta = dloss * self.activation.dphi_phi(self.out)
-            # SOFTMAX is a bit special since the activation depends on all nodes.
-            else:
-                print(f'dloss: {dloss}')
-                print(f'y: {self.out}')
-                for j in range(len(self.delta)):
-                    partial_deriv = np.zeros(len(self.delta))
-                    for i in range(len(self.delta)):
-                        partial_deriv[i] = self.activation.dphi_special(self.out, i, j)
-                    print(f'partial_deriv: {partial_deriv}')
-                    delta[j] = np.sum(dloss * partial_deriv)
+            delta = self.__last_layer_backward(delta, dloss)
         else:
             if self.activation.is_special:
                 raise NotImplementedError('Special activation(softmax) in a layer that is not the last')
@@ -68,9 +56,18 @@ class DenseLayer(Layer):
             delta *= self.activation.dphi_phi(self.out)
 
         self.delta = delta
-        print('-----Delta---')
-        print(self.delta)
-        print('-------------')
         self.grad_w += np.outer(self.delta, inp)
         self.grad_b += self.delta
         pass
+
+    def __last_layer_backward(self, delta, dloss):
+        if not self.activation.is_special:
+            delta = dloss * self.activation.dphi_phi(self.out)
+        # SOFTMAX is a bit special since the activation depends on all nodes.
+        else:
+            for j in range(len(self.delta)):
+                partial_deriv = np.zeros(len(self.delta))
+                for i in range(len(self.delta)):
+                    partial_deriv[i] = self.activation.dphi_special(self.out, i, j)
+                delta[j] = np.sum(dloss * partial_deriv)
+        return delta

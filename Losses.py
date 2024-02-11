@@ -44,8 +44,6 @@ class CategoricalCrossentropy(Loss):
         super().__init__()
 
     def loss(self, y, label):
-        print(f'label: {label}')
-        print(f'y: {y}')
         return -sum(label * np.log(y))
 
     def dloss(self, y, label):

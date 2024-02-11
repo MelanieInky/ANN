@@ -23,6 +23,11 @@ class Layer:
             return None
         return self.w
 
+    def get_biases(self):
+        if self.b is None:
+            return None
+        return self.b
+
     def get_output_dim(self):
         return self.output_dim
 
@@ -59,6 +64,9 @@ class Layer:
 
     def set_weight(self, w_coordinate: tuple, w: float):
         self.w[w_coordinate] = w
+
+    def set_bias(self, b_coordinate: tuple, b: float):
+        self.b[b_coordinate] = b
 
     def learn(self, learning_rate=0.01):
         if hasattr(self, "w"):
