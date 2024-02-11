@@ -11,7 +11,8 @@ import numpy as np
 
 
 class Activation(ABC):
-    pass
+    def __init__(self):
+        self.is_special = False
 
     @abstractmethod
     def phi(self, x):
@@ -37,6 +38,10 @@ class Logistic(Activation):
 
 
 class Tanh(Activation):
+
+    def __init__(self) -> None:
+        super().__init__()
+
     def phi(self, x):
         ex = np.exp(x)
         emx = np.exp(-x)
@@ -47,6 +52,10 @@ class Tanh(Activation):
 
 
 class ReLu(Activation):
+
+    def __init__(self) -> None:
+        super().__init__()
+
     def phi(self, x):
         return max(0, x)
 
@@ -55,6 +64,10 @@ class ReLu(Activation):
 
 
 class Linear(Activation):
+
+    def __init__(self) -> None:
+        super().__init__()
+
     def phi(self, x):
         return x
 
@@ -63,12 +76,22 @@ class Linear(Activation):
 
 
 class SoftMax(Activation):
+    def __init__(self):
+        super().__init__()
+        self.is_special = True
+
     def phi(self, x):
         exp_x = np.exp(x)
         return exp_x / np.sum(exp_x)
 
     def dphi_phi(self, y):
         return y * (1 - y)
+
+    def dphi_special(self, y, i, j):
+        # Returns dy_i/da_j
+        if i == j:
+            return y[i] * (1 - y[i])
+        return -y[i]*y[j]
 
 
 if __name__ == '__main__':

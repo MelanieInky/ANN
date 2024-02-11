@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from numpy import log, sum
+import numpy as np
 
 
 class Loss(ABC):
@@ -33,7 +33,7 @@ class CrossEntropy(Loss):
         super().__init__()
 
     def loss(self, y, label):
-        return -(label * log(y) + (1 - label) * log(1 - y))
+        return -(label * np.log(y) + (1 - label) * np.log(1 - y))
 
     def dloss(self, y, label):
         return (y - label) / (y * (1 - y))
@@ -44,7 +44,9 @@ class CategoricalCrossentropy(Loss):
         super().__init__()
 
     def loss(self, y, label):
-        return -sum(label * log(y))
+        print(f'label: {label}')
+        print(f'y: {y}')
+        return -sum(label * np.log(y))
 
     def dloss(self, y, label):
         return -label / y

@@ -1,7 +1,9 @@
 import numpy as np
 
-from Layer import *
+from Layer.DenseLayer import DenseLayer
+from Layer.FlattenLayer import FlattenLayer
 from Losses import *
+import numpy as np
 
 
 class NeuralNetwork:
@@ -19,26 +21,20 @@ class NeuralNetwork:
         self.label_dim = self.output_dim  # Alias for output_dim
         self.n_layers = 0
         if loss == 'CatCrossEntropy' or 'Categorical cross entropy':
-            self.loss_object = CategoricalCrossentropy()
+            self.loss_func = CategoricalCrossentropy()
         elif loss == 'CrossEntropy' or 'Cross entropy':
-            self.loss_object = CrossEntropy()
+            self.loss_func = CrossEntropy()
         elif loss == 'MSE' or 'mean squared error':
-            self.loss_object = MeanSquaredError()
+            self.loss_func = MeanSquaredError()
         else:
             raise NotImplementedError('Unknown loss')
 
-    def set_loss_part(self, loss, output, label):
+    def add_partial_loss(self, label):
         """
-        Compute the loss for a single input
-        Args:
-            label:
-            output:
-            loss:
-
-        Returns:
-
+        Compute the loss for the current label and output
         """
-        self.loss += self.loss_object.loss(output, label)
+        self.loss += self.loss_func.loss(self.output, label)
+        print(f'partial loss: {self.loss}')
 
     def add_dense_layer(self, n_nodes, activation="linear"):
         if self.layer_list:
@@ -72,7 +68,7 @@ class NeuralNetwork:
         self.output = out
 
     def backward_nn(self, label):
-        dloss = self.loss_object.dloss(self.output, label)
+        dloss = self.loss_func.dloss(self.output, label)
         if self.n_layers == 1:
             self.layer_list[0].backward(None, self.input, dloss)
         else:
@@ -116,6 +112,41 @@ class NeuralNetwork:
     def reset_loss(self):
         self.loss = 0
 
+    def compare_loss_derivative_finite_diff(self, layer_number, w_coordinate):
+        """
+        Compare the derivative of the loss wrt to a specific weight using backprop  and finite difference.
+        Useful for double-checking if everything works correctly
+        Args:
+            layer_number:
+            w_coordinate:
+
+        Returns:
+
+        """
+        eps = 1e-6
+        weights = self.layer_list[layer_number].get_weights()
+        weight_copy = np.copy(weights)
+        if len(w_coordinate) != weights.ndim:
+            raise Exception("The dimension of the weight tensor and the coordinate do not match")
+        w = weights[w_coordinate]  # The specific weight to change
+        # First get the gradients with
+        self.reset_gradients()
+        self.reset_loss()
+        self.forward_nn(self.X[0])
+        self.add_partial_loss(Y[0])
+        loss1 = self.loss
+        self.backward_nn(self.Y[0])
+        derivative_bp = self.layer_list[layer_number].grad_w[w_coordinate]
+
+        self.layer_list[layer_number].set_weight(w_coordinate, w + eps)
+        self.reset_loss()
+        self.forward_nn(self.X[0])
+        self.add_partial_loss(Y[0])
+        loss2 = self.loss
+        derivative_fd = (loss2 - loss1) / eps
+        print(f'Derivative with the finite difference: {derivative_fd}')
+        print(f'Derivative with the backward: {derivative_bp}')
+
     def __str__(self) -> str:
         str_out = "Neural network with:\n"
         str_out += f"Input dimensions {self.input_dim}\n"
@@ -126,7 +157,8 @@ class NeuralNetwork:
         return str_out
 
     def get_output(self):
-        print(self.layer_list[-1].out)
+        print(self.output)
+        return self.output
 
 
 if __name__ == "__main__":
@@ -141,12 +173,8 @@ if __name__ == "__main__":
     # ann.add_dense_layer(3,'logistic')
     ann.add_dense_layer(3, "softmax")
     ann.initialize_weights()
-    ann._learn_batch(3, 10000, 0.1)
-    ann.forward_nn(X[0])
-    ann.get_output()
-    ann.forward_nn(X[1])
-    ann.get_output()
-    ann.forward_nn(X[2])
-    ann.get_output()
+    ann._learn_batch(1, 1, 0.1)
 
     print(ann)
+
+    ann.compare_loss_derivative_finite_diff(0, (2,1))
